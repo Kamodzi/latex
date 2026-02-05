@@ -1,3 +1,6 @@
+# Структурная схема ДИНС
+
+```mermaid
 flowchart TD
     subgraph POWER["СИСТЕМА ПИТАНИЯ"]
         direction LR
@@ -55,21 +58,4 @@ flowchart TD
     
     %% Антенная система (пространственное разнесение)
     ANT_TX -.->|Смещение 20 мм| ANT_RX
-    
-    %% Требования к параметрам
-    classDef requirement fill:#e6f7ff,stroke:#1890ff,stroke-width:2px
-    classDef critical fill:#fff7e6,stroke:#fa8c16,stroke-width:2px
-    
-    XTAL:::requirement
-    BGT:::critical
-    QPA:::critical
-    LNA:::critical
-    ADC:::critical
-    MCU:::critical
-    
-    click XTAL "https://www.crystek.com/crystal-resonators" _blank
-    click BGT "https://www.infineon.com/cms/en/product/sensor/radar-sensor/bgt24mtr12/" _blank
-    click QPA "https://www.qorvo.com/products/p/QPA2611" _blank
-    click LNA "https://www.minicircuits.com/pdfs/ZX60-2425LN+.pdf" _blank
-    click ADC "https://www.analog.com/en/products/ad9653.html" _blank
-    click MCU "https://www.st.com/en/microcontrollers-microprocessors/stm32h7-series.html" _blank
+```
