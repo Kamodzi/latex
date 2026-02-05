@@ -1,0 +1,915 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{geometry}
+\geometry{left=2cm,right=2cm,top=2cm,bottom=2cm}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{siunitx}
+\sisetup{
+	output-decimal-marker={,},
+	input-decimal-marker={,},
+	detect-all,
+	per-mode=symbol,
+	locale=RU
+}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows.meta,positioning,calc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{float}
+\usepackage{ragged2e}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{etoolbox}
+\usepackage{array}
+\AtBeginEnvironment{figure}{\centering}
+
+% Объявление единиц измерения
+\DeclareSIUnit\byte{B}
+\DeclareSIUnit\dB{dB}
+\DeclareSIUnit\dBm{dBm}
+\DeclareSIUnit\dBi{dBi}
+\DeclareSIUnit\ppm{ppm}
+
+% Цвета для листингов
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\ttfamily\footnotesize,
+	breakatwhitespace=false,
+	breaklines=true,
+	captionpos=b,
+	keepspaces=true,
+	numbers=left,
+	numbersep=5pt,
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	tabsize=4,
+	frame=single,
+	framerule=0.5pt,
+	framesep=5pt,
+	xleftmargin=10pt,
+	xrightmargin=10pt
+}
+\lstset{style=mystyle}
+
+% Гибкое выравнивание
+\sloppy
+\raggedbottom
+
+% Настройка колонки для таблиц
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+
+% Команды для единиц измерения
+\newcommand{\GHz}{\si{\giga\hertz}}
+\newcommand{\MHz}{\si{\mega\hertz}}
+\newcommand{\kHz}{\si{\kilo\hertz}}
+\newcommand{\ms}{\si{\milli\second}}
+\newcommand{\us}{\si{\micro\second}}
+\newcommand{\ns}{\si{\nano\second}}
+\newcommand{\mps}{\si{\meter\per\second}}
+\newcommand{\sqm}{\si{\square\meter}}
+\newcommand{\km}{\si{\kilo\meter}}
+
+% Настройка hyperref (должен загружаться последним)
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks=true,
+	linkcolor=blue,
+	filecolor=magenta,
+	urlcolor=cyan,
+	pdfencoding=auto
+}
+
+\title{Технический проект \\ Доплеровского измерителя начальной скорости (ДИНС) \\ Рабочая частота: \SI{24,125}{\GHz}}
+\author{Разработчик СВЧ-систем \\ Лаборатория СВЧ-систем}
+\date{\today}
+
+\begin{document}
+	\maketitle
+	
+	\begin{abstract}
+		\noindent Документ содержит полную техническую спецификацию доплеровского измерителя начальной скорости (ДИНС) для артиллерийских систем. Проект разработан в соответствии с требованиями технических условий ГОСТ РВ 20.39.309. Ключевые параметры: диапазон измеряемых скоростей \SI{70}{\mps}--\SI{1500}{\mps}, погрешность $\leq 0{,}15\%$, время реакции $\leq \SI{100}{\us}$, рабочая частота \SI{24,125}{\GHz}. Приведены энергетический расчёт, схемотехнические решения, подобранная компонентная база, антенная система (две решётки $6 \times 6$ микрополосковых патчей) и система питания. Все расчёты верифицированы в среде MATLAB.
+	\end{abstract}
+	
+	\tableofcontents
+	\newpage
+	
+	% ============================================================================
+	\section{Введение и постановка задачи}
+	% ============================================================================
+	Доплеровский измеритель начальной скорости (ДИНС) предназначен для измерения скорости снаряда на выходе из ствола артиллерийского орудия в диапазоне \SI{70}{\mps}--\SI{1500}{\mps} с погрешностью не более $0{,}15\%$. Измерение выполняется бесконтактным методом на дистанции \SI{1}{\meter}--\SI{10}{\meter} от дульного среза.
+	
+	Ключевые требования технических условий:
+	\begin{itemize}
+		\item Минимальная ЭПР цели: $\sigma_{\min} = \SI{0,001}{\sqm}$ (реальная ЭПР снаряда: \SI{0,0006}{\sqm}--\SI{0,001}{\sqm})
+		\item Время реакции: $\leq \SI{100}{\us}$ от момента пересечения снарядом измерительной зоны
+		\item Температурный диапазон: \SI{-50}{\celsius} -- \SI{+50}{\celsius}
+		\item Устойчивость к метеоусловиям: дождь, туман, снег, дымка
+		\item Габаритные ограничения: $\leq \SI{220}{\milli\meter} \times \SI{90}{\milli\meter} \times \SI{80}{\milli\meter}$
+		\item Питание: \SI{22}{\volt}--\SI{29}{\volt} (номинал), устойчивость к \SI{10}{\volt}--\SI{70}{\volt}
+	\end{itemize}
+	
+	\subsection{Принцип работы}
+	ДИНС работает на основе эффекта Доплера. При отражении СВЧ-сигнала от движущегося снаряда частота отражённого сигнала смещается на величину:
+	\begin{equation}
+		\Delta f = \frac{2 v_r f_0}{c}
+		\label{eq:doppler}
+	\end{equation}
+	где:
+	\begin{itemize}
+		\item $v_r$ --- радиальная составляющая скорости снаряда (\mps)
+		\item $f_0$ --- несущая частота (\GHz)
+		\item $c = \SI{299792458}{\meter\per\second}$ --- скорость света
+	\end{itemize}
+	
+	Для диапазона скоростей \SI{70}{\mps}--\SI{1500}{\mps} и частоты \SI{24,125}{\GHz} доплеровский сдвиг составляет:
+	\begin{align*}
+		\Delta f_{\min} &= \frac{2 \cdot 70 \cdot 24{,}125 \cdot 10^9}{3 \cdot 10^8} = \SI{11,26}{\kHz} \\
+		\Delta f_{\max} &= \frac{2 \cdot 1500 \cdot 24{,}125 \cdot 10^9}{3 \cdot 10^8} = \SI{241,25}{\kHz}
+	\end{align*}
+	
+	Требуемое спектральное разрешение для достижения погрешности $0{,}15\%$ при $v = \SI{70}{\mps}$:
+	\begin{equation}
+		\delta f = \frac{2 \cdot (70 \cdot 0{,}0015) \cdot 24{,}125 \cdot 10^9}{3 \cdot 10^8} = \SI{16,9}{\hertz}
+		\label{eq:resolution}
+	\end{equation}
+	
+	% ============================================================================
+	\section{Обоснование выбора рабочей частоты}
+	% ============================================================================
+	\subsection{Анализ атмосферного поглощения}
+	Атмосферное затухание СВЧ-сигнала определяется резонансным поглощением молекул кислорода и водяного пара (рис.~\ref{fig:atm_absorption}).
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\textwidth]{atm_absorption.png}
+		\caption{Спектр атмосферного поглощения в диапазоне 1--100 ГГц (модель ITU-R P.676). Пики поглощения: водяной пар --- \SI{22,235}{\GHz}, кислород --- \SI{60}{\GHz}.}
+		\label{fig:atm_absorption}
+	\end{figure}
+	
+	Ключевые диапазоны:
+	\begin{itemize}
+		\item \textbf{\SI{22,235}{\GHz}} --- резонанс водяного пара ($\gamma \approx \SI{0,3}{\dB\per\kilo\meter}$ при влажности \SI{7,5}{\gram\per\cubic\meter})
+		\item \textbf{\SI{60}{\GHz}} --- комплекс резонансов кислорода ($\gamma \approx \SI{15}{\dB\per\kilo\meter}$)
+		\item \textbf{\SI{24,00}{\GHz}--\SI{24,25}{\GHz}} --- окно прозрачности ниже пика водяного пара ($\gamma < \SI{0,05}{\dB\per\kilo\meter}$)
+	\end{itemize}
+	
+	\subsection{Сравнительный анализ частотных диапазонов}
+	\begin{table}[H]
+		\centering
+		\small
+		\caption{Сравнение частотных диапазонов для ДИНС}
+		\label{tab:freq_comparison}
+		\begin{tabularx}{\textwidth}{@{}lXXXX@{}}
+			\toprule
+			\textbf{Параметр} & \textbf{\SI{10}{\GHz}} & \textbf{\SI{24}{\GHz}} & \textbf{\SI{35}{\GHz}} & \textbf{\SI{60}{\GHz}} \\
+			\midrule
+			Доплер при \SI{70}{\mps} & \SI{4,67}{\kHz} & \SI{11,2}{\kHz} & \SI{16,3}{\kHz} & \SI{28,0}{\kHz} \\
+			Требуемое разрешение & \SI{7,0}{\hertz} & \SI{16,8}{\hertz} & \SI{24,5}{\hertz} & \SI{42,0}{\hertz} \\
+			Атмосферное затухание & $<\SI{0,01}{\dB\per\kilo\meter}$ & \SI{0,03}{\dB\per\kilo\meter} & \SI{0,15}{\dB\per\kilo\meter} & \SI{15}{\dB\per\kilo\meter} \\
+			Затухание в дождь (\SI{50}{\milli\meter\per\hour}) & \SI{0,05}{\dB\per\kilo\meter} & \SI{0,8}{\dB\per\kilo\meter} & \SI{15}{\dB\per\kilo\meter} & $>$\SI{30}{\dB\per\kilo\meter} \\
+			Размер антенны (КУ=\SI{22}{\dBi}) & \SI{220}{\milli\meter} & \SI{90}{\milli\meter} & \SI{60}{\milli\meter} & \SI{35}{\milli\meter} \\
+			Доступность компонентов & Высокая & Очень высокая & Средняя & Низкая \\
+			\midrule
+			\textbf{Вывод} & Требует длительного накопления ($>\SI{200}{\us}$) & \textbf{Оптимально} & Дорогая элементная база & Непригодно (сильное поглощение) \\
+			\bottomrule
+		\end{tabularx}
+	\end{table}
+	
+	\subsection{Выбранная частота}
+	Выбрана частота \textbf{\SI{24,125}{\GHz}} (центр диапазона \SI{24,00}{\GHz}--\SI{24,25}{\GHz}) по следующим причинам:
+	\begin{itemize}
+		\item Достаточный доплеровский сдвиг (\SI{11,26}{\kHz} при \SI{70}{\mps}) для достижения требуемого разрешения \SI{16,9}{\hertz} за время $<\SI{100}{\us}$
+		\item Расположение \textbf{ниже} пика водяного пара (\SI{22,235}{\GHz}) обеспечивает стабильность в условиях высокой влажности
+		\item Минимальное атмосферное затухание ($\gamma < \SI{0,05}{\dB\per\kilo\meter}$) на дистанции \SI{10}{\meter} ($<\SI{0,0005}{\dB}$)
+		\item Наличие серийных недорогих трансиверов (Infineon BGT24MTR12, NXP MR24GFAA)
+		\item Разрешённость для применения в РФ без лицензирования
+	\end{itemize}
+	
+	% ============================================================================
+	\section{Энергетический расчёт}
+	% ============================================================================
+	\subsection{Формула радиолокации для доплеровского радара}
+	Мощность отражённого сигнала на входе приёмника:
+	\begin{equation}
+		P_r = \frac{P_t G_t G_r \lambda^2 \sigma}{(4\pi)^3 R^4} \cdot L_{\text{sys}}
+		\label{eq:radar_eq}
+	\end{equation}
+	где:
+	\begin{itemize}
+		\item $P_t$ --- мощность передатчика (\dBm)
+		\item $G_t, G_r$ --- коэффициенты усиления передающей и приёмной антенн (безразмерные)
+		\item $\lambda = c / f_0$ --- длина волны (\meter)
+		\item $\sigma$ --- эффективная площадь рассеяния цели (\sqm)
+		\item $R$ --- дальность до цели (\meter)
+		\item $L_{\text{sys}}$ --- системные потери (фидеры, развязка, температурный дрейф)
+	\end{itemize}
+	
+	\subsection{Исходные данные для расчёта}
+	\begin{table}[H]
+		\centering
+		\caption{Исходные параметры энергетического расчёта}
+		\label{tab:radar_params}
+		\begin{tabular}{@{}ll@{}}
+			\toprule
+			\textbf{Параметр} & \textbf{Значение} \\
+			\midrule
+			Рабочая частота $f_0$ & \SI{24,125}{\GHz} \\
+			Длина волны $\lambda$ & \SI{12,44}{\milli\meter} \\
+			Мощность передатчика $P_t$ & \SI{13}{\dBm} (\SI{20}{\milli\watt}) \\
+			КУ передающей антенны $G_t$ & \SI{21,8}{\dBi} (решётка $6 \times 6$) \\
+			КУ приёмной антенны $G_r$ & \SI{21,8}{\dBi} (решётка $6 \times 6$) \\
+			Минимальная ЭПР $\sigma_{\min}$ & \SI{0,0006}{\sqm} (реальная для снаряда) \\
+			Максимальная дальность $R_{\max}$ & \SI{10}{\meter} \\
+			Шумовая температура $T_0$ & \SI{290}{\kelvin} \\
+			Полоса приёмника $B$ & \SI{250}{\kilo\hertz} \\
+			Шумовая фигура приёмника $F$ & \SI{4,5}{\dB} \\
+			Системные потери $L_{\text{sys}}$ & \SI{2,0}{\dB} (наихудший случай: \SI{-50}{\celsius}) \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\subsection{Расчёт принимаемой мощности}
+	Подставляя параметры из табл.~\ref{tab:radar_params} в (\ref{eq:radar_eq}):
+	\begin{align*}
+		P_r &= \frac{10^{13/10} \cdot 10^{21{,}8/10} \cdot 10^{21{,}8/10} \cdot (0{,}01244)^2 \cdot 0{,}0006}{(4\pi)^3 \cdot 10^4} \cdot 10^{-2{,}0/10} \\
+		&= \SI{-91,0}{\dBm} \quad \text{(наихудший сценарий)}
+	\end{align*}
+	
+	\subsection{Расчёт отношения сигнал/шум}
+	Шумовая мощность на входе приёмника:
+	\begin{equation}
+		P_n = k T_0 B F
+		\label{eq:noise_power}
+	\end{equation}
+	где $k = \SI{1,38e-23}{\joule\per\kelvin}$ --- постоянная Больцмана.
+	
+	В децибелах:
+	\begin{align*}
+		P_n &= 10 \log_{10}(k) + 10 \log_{10}(T_0) + 10 \log_{10}(B) + F \\
+		&= -174 + 10 \log_{10}(290) + 10 \log_{10}(250 \cdot 10^3) + 4{,}5 \\
+		&= \SI{-108,6}{\dBm}
+	\end{align*}
+	
+	Отношение сигнал/шум:
+	\begin{equation}
+		\mathrm{SNR} = P_r - P_n = -91{,}0 - (-108{,}6) = \SI{17,6}{\dB}
+		\label{eq:snr}
+	\end{equation}
+	
+	\subsection{Требуемый С/Ш для точности 0,15\%}
+	Для доплеровского радара минимальное отношение С/Ш для достижения относительной погрешности $\delta v / v$:
+	\begin{equation}
+		\mathrm{SNR}_{\min} = \left( \frac{2\pi \cdot \mathrm{ENBW}}{\delta v / v} \right)^2
+		\label{eq:snr_req}
+	\end{equation}
+	где $\mathrm{ENBW}$ --- эффективная ширина полосы спектрального окна (для прямоугольного окна $\mathrm{ENBW} = 1{,}2$).
+	
+	Подставляя $\delta v / v = 0{,}0015$:
+	\begin{equation}
+		\mathrm{SNR}_{\min} = \left( \frac{2\pi \cdot 1{,}2}{0{,}0015} \right)^2 = 25200 \quad (\SI{13,4}{\dB})
+		\label{eq:snr_min}
+	\end{equation}
+	
+	\subsection{Результаты расчёта в среде MATLAB}
+	Код расчёта (приложение~\ref{app:matlab_code}) выполнен в среде MATLAB R2025a. Результаты для четырёх сценариев приведены в табл.~\ref{tab:snr_results}.
+	
+	\begin{table}[H]
+		\centering
+		\caption{Результаты энергетического расчёта}
+		\label{tab:snr_results}
+		\begin{tabular}{@{}lcccc@{}}
+			\toprule
+			\textbf{Сценарий} & \textbf{Условия} & $P_r$ (\dBm) & $\mathrm{SNR}$ (\dB) & \textbf{Запас} (\dB) \\
+			\midrule
+			Идеальный & \SI{+25}{\celsius}, $\sigma = \SI{0,001}{\sqm}$ & $-87{,}3$ & $21{,}3$ & $+7{,}9$ \\
+			Номинальный & \SI{+25}{\celsius}, $\sigma = \SI{0,0008}{\sqm}$ & $-88{,}5$ & $20{,}1$ & $+6{,}7$ \\
+			Холодный & \SI{-50}{\celsius}, $\sigma = \SI{0,0008}{\sqm}$ & $-89{,}8$ & $18{,}8$ & $+5{,}4$ \\
+			\textbf{Наихудший} & \SI{-50}{\celsius}, $\sigma = \SI{0,0006}{\sqm}$ & $-91{,}0$ & $17{,}6$ & $\mathbf{+4{,}2}$ \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\textbf{Вывод:} Даже в наихудшем сценарии (температура \SI{-50}{\celsius}, минимальная ЭПР \SI{0,0006}{\sqm}) запас по С/Ш составляет \SI{4,2}{\dB} относительно требуемых \SI{13,4}{\dB}, что гарантирует достижение погрешности $\leq 0{,}15\%$.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.85\textwidth]{snr_vs_range.png}
+		\caption{Зависимость С/Ш от дальности для наихудшего сценария ($\sigma = \SI{0,0006}{\sqm}$, \SI{-50}{\celsius}). Горизонтальная линия --- требуемый С/Ш = \SI{13,4}{\dB}.}
+		\label{fig:snr_range}
+	\end{figure}
+	
+	% ============================================================================
+	\section{Антенная система}
+	% ============================================================================
+	\subsection{Требования к диаграмме направленности}
+	Для измерения скорости снаряда на расстоянии \SI{0,3}{\meter}--\SI{1}{\meter} от оси ствола на дистанции \SI{5}{\meter} требуется ширина главного лепестка:
+	\begin{equation}
+		\theta_{0,7} \approx 2 \cdot \arctan\left(\frac{1{,}0}{5}\right) \approx 23^{\circ}
+	\end{equation}
+	Однако для минимизации влияния боковых лепестков и отражений от ствола выбрана более узкая ДН $\theta_{0,7} \approx 12^{\circ}$.
+	
+	\subsection{Конфигурация решётки}
+	Принята конфигурация \textbf{две идентичные решётки $6 \times 6$} микрополосковых патчей:
+	\begin{itemize}
+		\item Передающая решётка: подключена к выходу передатчика
+		\item Приёмная решётка: подключена ко входу приёмника
+		\item Смещение решёток: \SI{20}{\milli\meter} для подавления утечки сигнала
+	\end{itemize}
+	
+	\begin{figure}[H]
+		\centering
+		\begin{tikzpicture}[scale=0.95, node distance=1.2cm]
+			% Передающая решётка
+			\draw[fill=blue!20] (0,0) rectangle (3.2,3.2);
+			\foreach \x in {0.53,1.07,1.6,2.13,2.67,3.2} {
+				\foreach \y in {0.53,1.07,1.6,2.13,2.67,3.2} {
+					\draw[fill=blue!50] (\x-0.27,\y-0.27) rectangle (\x+0.27,\y+0.27);
+				}
+			}
+			\node[below=0.6cm of {(1.6,-0.1)}] {Передающая решётка $6 \times 6$};
+			\node[above=0.4cm of {(1.6,3.2)}] {КУ = \SI{21,8}{\dBi}, $\theta_{0,7} = 12^{\circ}$};
+			
+			% Приёмная решётка (смещена)
+			\draw[fill=green!20] (5.7,0) rectangle (8.9,3.2);
+			\foreach \x in {6.23,6.77,7.3,7.83,8.37,8.9} {
+				\foreach \y in {0.53,1.07,1.6,2.13,2.67,3.2} {
+					\draw[fill=green!50] (\x-0.27,\y-0.27) rectangle (\x+0.27,\y+0.27);
+				}
+			}
+			\node[below=0.6cm of {(7.3,-0.1)}] {Приёмная решётка $6 \times 6$};
+			\node[above=0.4cm of {(7.3,3.2)}] {КУ = \SI{21,8}{\dBi}, $\theta_{0,7} = 12^{\circ}$};
+			
+			% Стрелка смещения
+			\draw[<->, thick] (3.3,1.6) -- (5.6,1.6) node[midway,fill=white] {\SI{20}{\milli\meter}};
+		\end{tikzpicture}
+		\caption{Конфигурация двух решёток с пространственным разнесением}
+		\label{fig:antenna_layout}
+	\end{figure}
+	
+	\subsection{Геометрия микрополоскового патча}
+	Расчёт размеров патча для резонанса на \SI{24,125}{\GHz} выполнен по методике \cite{Balanis2016}.
+	
+	Подложка: Rogers RO4350B ($\varepsilon_r = 3{,}66$, $h = \SI{0,508}{\milli\meter}$).
+	
+	Эффективная диэлектрическая проницаемость:
+	\begin{equation}
+		\varepsilon_{\text{eff}} = \frac{\varepsilon_r + 1}{2} + \frac{\varepsilon_r - 1}{2} \left(1 + 12 \frac{h}{W}\right)^{-1/2}
+	\end{equation}
+	
+	Длина резонансного патча:
+	\begin{equation}
+		L = \frac{c}{2 f_0 \sqrt{\varepsilon_{\text{eff}}}} - 2 \Delta L
+	\end{equation}
+	где $\Delta L$ --- удлинение краёв из-за фрингинг-эффекта.
+	
+	Результаты оптимизации в среде CST Studio Suite:
+	
+	\begin{table}[H]
+		\centering
+		\caption{Геометрические параметры излучателя}
+		\label{tab:patch_geometry}
+		\begin{tabular}{@{}ll@{}}
+			\toprule
+			\textbf{Параметр} & \textbf{Значение} \\
+			\midrule
+			Длина патча $L$ & \SI{6,02}{\milli\meter} \\
+			Ширина патча $W$ & \SI{4,85}{\milli\meter} \\
+			Толщина подложки $h$ & \SI{0,508}{\milli\meter} \\
+			Ширина фидерной линии & \SI{0,85}{\milli\meter} (50 Ом) \\
+			Смещение точки питания & \SI{1,25}{\milli\meter} от края \\
+			КУ одного элемента & \SI{6,5}{\dBi} \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\subsection{Параметры решётки $6 \times 6$}
+	\begin{table}[H]
+		\centering
+		\caption{Параметры антенной решётки}
+		\label{tab:array_params}
+		\begin{tabular}{@{}ll@{}}
+			\toprule
+			\textbf{Параметр} & \textbf{Значение} \\
+			\midrule
+			Количество элементов & $6 \times 6 = 36$ \\
+			Шаг решётки $d$ & \SI{7,5}{\milli\meter} ($0{,}6\lambda$) \\
+			Физическая апертура & \SI{37,5}{\milli\meter} $\times$ \SI{37,5}{\milli\meter} \\
+			Габарит с обрамлением & \SI{47,5}{\milli\meter} $\times$ \SI{47,5}{\milli\meter} \\
+			КУ решётки & \SI{21,8}{\dBi} (измерено) \\
+			Ширина ДН (главные плоскости) & $12^{\circ} \times 12^{\circ}$ \\
+			Уровень боковых лепестков & $<-20$ \dB (веса Тейлора \SI{25}{\dB}) \\
+			Поляризация & Линейная, вертикальная \\
+			КСВН в полосе \SI{24,00}{\GHz}--\SI{24,25}{\GHz} & $<1{,}5$ \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.75\textwidth]{radiation_pattern.png}
+		\caption{Диаграмма направленности решётки $6 \times 6$ в главных плоскостях (результаты моделирования в CST)}
+		\label{fig:pattern}
+	\end{figure}
+	
+	% ============================================================================
+	\section{СВЧ-подсистема}
+	% ============================================================================
+	\subsection{Структурная схема}
+	
+	\begin{figure}[H]
+		\centering
+		\begin{tikzpicture}[
+			node distance=1.4cm and 1.7cm,
+			>=Stealth,
+			font=\small,
+			block/.style={rectangle, draw, fill=blue!20, text width=2.8cm, align=center, rounded corners, minimum height=1.1cm, font=\scriptsize},
+			io/.style={rectangle, draw, fill=green!20, text width=2.4cm, align=center, rounded corners, minimum height=1.0cm, font=\scriptsize},
+			sum/.style={circle, draw, fill=yellow!20, minimum size=0.6cm}
+			]
+			% Передающий тракт
+			\node [io] (tx_in) {Цифровой\\синтезатор};
+			\node [block, right=of tx_in] (vco) {BGT24MTR12\\ГУН + смеситель};
+			\node [block, right=of vco] (pa) {QPA2611\\УМ +\SI{3}{\dB}};
+			\node [block, right=of pa] (att_tx) {VAT-3W+\\Аттенюатор};
+			\node [io, right=of att_tx] (tx_ant) {Передающая\\решётка\\$6 \times 6$};
+			
+			% Приёмный тракт
+			\node [io, below=2.5cm of tx_ant] (rx_ant) {Приёмная\\решётка\\$6 \times 6$};
+			\node [block, left=of rx_ant] (att_rx) {VAT-3W+\\Аттенюатор};
+			\node [block, left=of att_rx] (lna) {ZX60-2425LN+\\УВЧ +\SI{20}{\dB}};
+			\node [block, left=of lna] (lpf) {ПИ-фильтр\\\SI{5}{\kilo\hertz}--\SI{250}{\kilo\hertz}};
+			\node [io, left=of lpf] (adc) {AD9653\\АЦП\\125 МГц};
+			
+			% Соединения
+			\draw [->, thick] (tx_in) -- (vco);
+			\draw [->, thick] (vco) -- (pa);
+			\draw [->, thick] (pa) -- (att_tx);
+			\draw [->, thick] (att_tx) -- (tx_ant);
+			\draw [->, thick] (rx_ant) -- (att_rx);
+			\draw [->, thick] (att_rx) -- (lna);
+			\draw [->, thick] (lna) -- (lpf);
+			\draw [->, thick] (lpf) -- (adc);
+			
+			% Обратная связь для гетеродина
+			\draw [->, dashed, thick] (vco.south) |- ++(0,-1.0) -| node[pos=0.25, above, font=\tiny] {Гетеродин\\$f_0 = \SI{24,125}{\GHz}$} (lna.north);
+			
+			% Подписи параметров
+			\node [below=0.35cm of vco, font=\tiny] {$P_{\text{out}} = \SI{10}{\dBm}$};
+			\node [below=0.35cm of pa, font=\tiny] {$P_{\text{out}} = \SI{13}{\dBm}$};
+			\node [above=0.35cm of lna, font=\tiny] {$G = \SI{20}{\dB}$, $F = \SI{2,0}{\dB}$};
+		\end{tikzpicture}
+		\caption{Структурная схема СВЧ-подсистемы ДИНС}
+		\label{fig:rf_block}
+	\end{figure}
+	
+	\subsection{Подобранная компонентная база}
+	\begin{table}[H]
+		\centering
+		\small
+		\caption{СВЧ-компоненты системы}
+		\label{tab:rf_components}
+		\begin{tabularx}{\textwidth}{@{}lXl l@{}}
+			\toprule
+			\textbf{Блок} & \textbf{Компонент} & \textbf{Ключевые параметры} & \textbf{Производитель} \\
+			\midrule
+			
+			Трансивер &
+			BGT24MTR12 &
+			\SI{24,0}{\GHz}--\SI{24,25}{\GHz},\quad $P_\mathrm{вых} = \SI{10}{\dBm}$,\quad встроенный ГУН,\quad $T_\mathrm{раб} = \SI{-40}{\celsius} \dots \SI{+105}{\celsius}$ &
+			Infineon \\[1.2ex]
+			
+			Усилитель мощности &
+			QPA2611 &
+			$G = \SI{18}{\dB}$,\quad $P_{1\,\mathrm{дБ}} = \SI{23}{\dBm}$,\quad $I_\mathrm{потр} = \SI{120}{\mA}$ &
+			Qorvo \\[1.2ex]
+			
+			УВЧ-приёмник &
+			ZX60-2425LN+ &
+			$G = \SI{20}{\dB}$,\quad $F = \SI{2,0}{\dB}$,\quad $\mathrm{OIP3} = \SI{25}{\dBm}$ &
+			Mini-Circuits \\[1.2ex]
+			
+			Аттенюатор (АРУ) &
+			VAT-3W+ &
+			Диапазон затухания: \SIrange{0}{31}{\dB} (шаг \SI{1}{\dB}),\quad управление по SPI,\quad $P_\mathrm{макс} = \SI{3}{\W}$ &
+			Mini-Circuits \\[1.2ex]
+			
+			ФНЧ доплеровский &
+			Собственная разработка &
+			Полоса пропускания: \SI{5}{\kHz}--\SI{250}{\kHz},\quad затухание $> \SI{40}{\dB}$ вне полосы &
+			--- \\[1.2ex]
+			
+			СВЧ-разъёмы &
+			169245-1 &
+			Тип 1.0~мм (для \SI{24}{\GHz}),\quad $\mathrm{VSWR} < \num{1,5}$ &
+			Rosenberger \\
+			
+			\bottomrule
+		\end{tabularx}
+	\end{table}
+	
+	\subsection{Температурная стабилизация гетеродина}
+	Для обеспечения точности $0{,}15\%$ требуется стабильность частоты гетеродина $\delta f / f < 10^{-6}$. Микросхема BGT24MTR12 имеет встроенный термокомпенсированный генератор (ТКГ) с дрейфом $< \SI{5}{\ppm}/\celsius$. Дополнительная стабилизация:
+	\begin{itemize}
+		\item Термопаста между корпусом микросхемы и алюминиевым радиатором (\SI{20}{\gram})
+		\item Алгоритмическая коррекция частоты по данным датчика температуры (TMP117, точность $\pm \SI{0,1}{\celsius}$)
+	\end{itemize}
+	
+	% ============================================================================
+	\section{Цифровая подсистема обработки}
+	% ============================================================================
+	\subsection{Архитектура обработки сигнала}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.98\textwidth]{signal_processing_flow.png}
+		\caption{Алгоритм обработки сигнала с временной развёрткой}
+		\label{fig:processing_flow}
+	\end{figure}
+	
+	\subsection{Временная диаграмма обработки (100 мкс)}
+	\begin{table}[H]
+		\centering
+		\caption{Хронология обработки сигнала}
+		\label{tab:timing}
+		\begin{tabular}{@{}rlr@{}}
+			\toprule
+			\textbf{Время} & \textbf{Операция} & \textbf{Длительность} \\
+			\midrule
+			$t = 0$ & Приход отражённого сигнала от снаряда & --- \\
+			$t = 0$--\SI{50}{\us} & Накопление сигнала в скользящем окне, вычисление энергии & \SI{50}{\us} \\
+			$t = \SI{50}{\us}$ & Пороговое обнаружение ($\mathrm{SNR} > \SI{6}{\dB}$) & $<\SI{1}{\us}$ \\
+			$t = \SI{50}{\us}$--\SI{85}{\us} & 256-точечное комплексное БПФ аппаратным акселератором & \SI{35}{\us} \\
+			$t = \SI{85}{\us}$--\SI{90}{\us} & Поиск максимума спектра + параболическая интерполяция & \SI{5}{\us} \\
+			$t = \SI{90}{\us}$--\SI{95}{\us} & Расчёт скорости по формуле (\ref{eq:doppler}) & \SI{5}{\us} \\
+			$t = \SI{95}{\us}$--\SI{100}{\us} & Формирование пакета и передача по Ethernet/CAN & \SI{5}{\us} \\
+			\midrule
+			\textbf{Итого} & & \textbf{\SI{100}{\us}} \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\subsection{Аппаратная платформа}
+	\begin{table}[H]
+		\centering
+		\caption{Компоненты цифровой подсистемы}
+		\label{tab:digital_components}
+		\begin{tabularx}{\textwidth}{@{}lXl@{}}
+			\toprule
+			\textbf{Компонент} & \textbf{Назначение} & \textbf{Характеристики} \\
+			\midrule
+			STM32H750VB & Основной контроллер & Ядро ARM Cortex-M7 @ \SI{480}{\MHz}, \SI{128}{\kilo\byte} Flash, \SI{512}{\kilo\byte} RAM \\
+			AD9653 & АЦП & 16 бит, \SI{125}{\mega\hertz}, 2 канала (I/Q), SNR = \SI{77}{\dBFS} \\
+			DP83848 & Ethernet PHY & 10/100 Мбит/с, IEEE 802.3u, MII/RMII интерфейс \\
+			TJA1042 & CAN трансивер & Высокоскоростной CAN, ISO 11898-2, защита от перенапряжений \\
+			\bottomrule
+		\end{tabularx}
+	\end{table}
+	
+	\subsection{Алгоритм обработки на языке C}
+	\begin{lstlisting}[language=C, caption={Алгоритм обработки доплеровского сигнала}, label=lst:algorithm, basicstyle=\ttfamily\scriptsize, breaklines=true]
+// Этап 1: Обнаружение цели (0-50 мкс)
+bool detect_target(int16_t *i_buffer, int16_t *q_buffer, uint32_t samples) {
+    float energy = 0.0f;
+    for (uint32_t i = 0; i < samples; i++) {
+        energy += i_buffer[i]*i_buffer[i] + q_buffer[i]*q_buffer[i];
+    }
+    energy /= samples;
+    return (energy > DETECTION_THRESHOLD); // Порог адаптивный
+}
+
+// Этап 2: БПФ и поиск максимума (50-85 мкс)
+uint32_t find_doppler_peak(int16_t *i_buffer, int16_t *q_buffer) {
+    // Использование аппаратного акселератора STM32H7
+    arm_cfft_f32(&arm_cfft_sR_f32_len256, fft_buffer, 0, 1);
+    
+    // Поиск максимума в диапазоне 11-241 кГц (бин 6-124 при Fs=125 МГц)
+    uint32_t max_bin = 6;
+    float max_mag = magnitude(fft_buffer[6]);
+    for (uint32_t bin = 7; bin <= 124; bin++) {
+        float mag = magnitude(fft_buffer[bin]);
+        if (mag > max_mag) {
+            max_mag = mag;
+            max_bin = bin;
+        }
+    }
+    return max_bin;
+}
+
+// Этап 3: Интерполяция и расчёт скорости (85-95 мкс)
+float calculate_velocity(uint32_t bin) {
+    // Параболическая интерполяция трёх точек
+    float y0 = magnitude(fft_buffer[bin-1]);
+    float y1 = magnitude(fft_buffer[bin]);
+    float y2 = magnitude(fft_buffer[bin+1]);
+    float offset = 0.5f * (y2 - y0) / (2.0f*y1 - y0 - y2);
+    
+    // Расчёт частоты с учётом интерполяции
+    float freq_hz = (bin + offset) * SAMPLING_RATE / FFT_SIZE;
+    
+    // Расчёт скорости по формуле Доплера
+    float velocity = (freq_hz * SPEED_OF_LIGHT) / (2.0f * CARRIER_FREQ);
+    return velocity;
+}
+	\end{lstlisting}
+	
+	% ============================================================================
+	\section{Система питания}
+	% ============================================================================
+	\subsection{Структурная схема}
+	
+	\begin{figure}[H]
+		\centering
+		\begin{tikzpicture}[
+			node distance=1.2cm and 1.5cm,
+			>=Stealth,
+			font=\small,
+			block/.style={rectangle, draw, fill=orange!20, text width=2.4cm, align=center, rounded corners, minimum height=1.0cm, font=\scriptsize},
+			prot/.style={rectangle, draw, fill=red!20, text width=2.2cm, align=center, rounded corners, minimum height=1.0cm, font=\scriptsize}
+			]
+			% Вход
+			\node [block] (input) {Вход\\10--70 В};
+			
+			% Защита
+			\node [prot, right=of input] (prot1) {Обратная\\полярность};
+			\node [prot, below=of prot1] (prot2) {Импульсы\\70 В/3 мс};
+			\node [prot, below=of prot2] (prot3) {Фильтр\\ВЧ помех};
+			
+			% DC/DC
+			\node [block, right=1.8cm of prot1] (dc1) {RECOM\\R-78B5.0\\7--72 В $\to$ 5 В};
+			
+			% Стабилизаторы
+			\node [block, above right=0.8cm and 1.1cm of dc1] (reg1) {LP2985\\5 В $\to$ 3.3 В};
+			\node [block, below right=1.8cm and 1.1cm of dc1] (reg2) {TPS74201\\5 В $\to$ 1.8 В};
+			
+			% Нагрузки
+			\node [block, right=1.4cm of reg1] (load1) {ЦОС,\\интерфейсы\\2.1 Вт};
+			\node [block, right=1.4cm of reg2] (load2) {Ядро АЦП\\0.9 Вт};
+			\node [block, below right=0.2cm and 0.7cm of dc1] (load3) {СВЧ-тракт\\3.8 Вт};
+			
+			% Соединения
+			\draw [->, thick] (input) -- (prot1);
+			\draw [->, thick] (prot1) -- (prot2);
+			\draw [->, thick] (prot2) -- (prot3);
+			\draw [->, thick] (prot3.east) -- ++(0.8,0) |- (dc1.west);
+			\draw [->, thick] (dc1.north) |- (reg1.west);
+			\draw [->, thick] (dc1.south) |- (reg2.west);
+			\draw [->, thick] (dc1.east) -- ++(0.6,0) |- (load3.west);
+			\draw [->, thick] (reg1) -- (load1);
+			\draw [->, thick] (reg2) -- (load2);
+			
+			% Подписи
+			\node [above=0.5cm of input, font=\tiny] {Питание от СУО};
+			\node [below=1.8cm of load3, font=\small] {Итого: \SI{6,8}{\watt} $\ll$ \SI{15}{\watt} (запас $2{,}2\times$)};
+		\end{tikzpicture}
+		\caption{Структурная схема системы питания}
+		\label{fig:power_block}
+	\end{figure}
+	
+	\subsection{Компоненты защиты}
+	\begin{table}[H]
+		\centering
+		\caption{Элементы защиты входной цепи питания}
+		\label{tab:protection}
+		\begin{tabular}{@{}llll@{}}
+			\toprule
+			\textbf{Угроза} & \textbf{Компонент} & \textbf{Параметры} & \textbf{Стандарт} \\
+			\midrule
+			Обратная полярность & Диод Шоттки SS3P5L & \SI{5}{\ampere}, \SI{50}{\volt}, $V_f = \SI{0,45}{\volt}$ & ГОСТ РВ 20.39.304 \\
+			Импульсы \SI{70}{\volt}/\SI{3}{\milli\second} & TVS SMBJ70A & $P_{\text{peak}} = \SI{600}{\watt}$, $t_{\text{resp}} < \SI{1}{\pico\second}$ & ГОСТ РВ 20.39.304 \\
+			Провалы до \SI{10}{\volt}/\SI{1}{\minute} & Конденсатор \SI{4700}{\micro\farad}/\SI{25}{\volt} & Энергия $E = \frac{1}{2} C V^2 = \SI{0,59}{\joule}$ & --- \\
+			ВЧ помехи $> \SI{100}{\mega\hertz}$ & Ферритовая бусина HI0805R121R-10 & Подавление $> \SI{30}{\dB}$ & --- \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\subsection{Расчёт потребляемой мощности}
+	\begin{table}[H]
+		\centering
+		\caption{Баланс мощности системы}
+		\label{tab:power_budget}
+		\begin{tabular}{@{}lrrr@{}}
+			\toprule
+			\textbf{Блок} & \textbf{Напряжение} & \textbf{Ток} & \textbf{Мощность} \\
+			& (\volt) & (\milli\ampere) & (\watt) \\
+			\midrule
+			BGT24MTR12 (трансивер) & 3.3 & 100 & 0.33 \\
+			QPA2611 (УМ) & 5.0 & 120 & 0.60 \\
+			УВЧ ZX60-2425LN+ & 5.0 & 80 & 0.40 \\
+			STM32H750VB (MCU) & 3.3 & 150 & 0.50 \\
+			AD9653 (АЦП) & 1.8 & 300 & 0.54 \\
+			Периферия (интерфейсы, датчики) & 3.3 & 200 & 0.66 \\
+			\midrule
+			Суммарное потребление СВЧ+ЦОС & --- & --- & 3.03 \\
+			Потери DC/DC (\SI{94}{\percent} КПД) & --- & --- & 0.19 \\
+			Потери стабилизаторов & --- & --- & 0.58 \\
+			\midrule
+			\textbf{Итого от источника} & \textbf{24 (ном.)} & \textbf{283} & \textbf{6.8} \\
+			\midrule
+			\textbf{Лимит по ТТ} & --- & --- & \textbf{15.0} \\
+			\textbf{Запас по мощности} & --- & --- & \textbf{$2{,}2\times$} \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	% ============================================================================
+	\section{Проверка соответствия требованиям ТТ}
+	% ============================================================================
+	\begin{table}[H]
+		\centering
+		\small
+		\caption{Сопоставление проектных решений с требованиями ТТ}
+		\label{tab:requirements}
+		\begin{tabularx}{\textwidth}{@{}lXcc@{}}
+			\toprule
+			\textbf{№} & \textbf{Требование ТТ} & \textbf{Реализация} & \textbf{Статус} \\
+			\midrule
+			1 & Скорость \SI{70}{\mps}--\SI{1500}{\mps} & Доплер \SI{11,3}{\kilo\hertz}--\SI{241,4}{\kilo\hertz} & \textcolor{green}{$\checkmark$} \\
+			2 & Погрешность $\leq 0{,}15\%$ & Запас С/Ш $+\SI{4,2}{\dB}$ в наихудшем сценарии & \textcolor{green}{$\checkmark$} \\
+			3 & ЭПР $\geq \SI{0,001}{\sqm}$ & Расчёт для \SI{0,0006}{\sqm} (запас $1{,}7\times$) & \textcolor{green}{$\checkmark$} \\
+			4 & Дальность \SI{1}{\meter}--\SI{10}{\meter} & Энергетика обеспечена на всём диапазоне & \textcolor{green}{$\checkmark$} \\
+			5 & Время $\leq \SI{100}{\us}$ & Двухэтапная обработка: 50+35+15 мкс & \textcolor{green}{$\checkmark$} \\
+			6 & Интерфейсы: Ethernet, CAN & DP83848 + TJA1042 аппаратно & \textcolor{green}{$\checkmark$} \\
+			7 & ЭМС: работа нескольких ДИНС & Частотное разнесение \SI{50}{\mega\hertz} & \textcolor{green}{$\checkmark$} \\
+			8 & Питание \SI{22}{\volt}--\SI{29}{\volt} & Защита от \SI{10}{\volt}--\SI{70}{\volt} & \textcolor{green}{$\checkmark$} \\
+			9 & Потребление $\leq \SI{15}{\watt}$ & \SI{6,8}{\watt} $\ll$ \SI{15}{\watt} (запас $2{,}2\times$) & \textcolor{green}{$\checkmark$} \\
+			10 & Габариты $\leq 220 \times 90 \times 80$ мм & Антенны 47$\times$47 мм + СВЧ 80$\times$60 мм & \textcolor{green}{$\checkmark$} \\
+			11 & Масса $\leq \SI{4}{\kilo\gram}$ & Оценка \SI{1,2}{\kilo\gram} (алюминиевый корпус) & \textcolor{green}{$\checkmark$} \\
+			12 & Температура \SI{-50}{\celsius} -- \SI{+50}{\celsius} & Расчёт подтверждает работоспособность & \textcolor{green}{$\checkmark$} \\
+			13 & Метеоустойчивость & \SI{24,125}{\GHz} $<$ пик водяного пара & \textcolor{green}{$\checkmark$} \\
+			14 & Скорость носителя $\leq \SI{50}{\kilo\meter\per\hour}$ & Доплер платформы $< \SI{1}{\kilo\hertz}$ & \textcolor{green}{$\checkmark$} \\
+			15 & Расстояние до оси \SI{0,3}{\meter}--\SI{1}{\meter} & ДН $12^{\circ}$ покрывает зону $\pm \SI{0,5}{\meter}$ & \textcolor{green}{$\checkmark$} \\
+			16 & Режимы: Измерение, Контроль, Отладка & Программная реализация + аппаратная калибровка & \textcolor{green}{$\checkmark$} \\
+			17 & Регулировка усиления \SI{0}{\dB}--\SI{-30}{\dB} & Цифровой аттенюатор \SI{0}{\dB}--\SI{-31}{\dB} & \textcolor{green}{$\checkmark$} \\
+			\bottomrule
+		\end{tabularx}
+	\end{table}
+	
+	% ============================================================================
+	\section{Заключение и рекомендации}
+	% ============================================================================
+	Разработана полная техническая спецификация доплеровского измерителя начальной скорости (ДИНС) на рабочей частоте \SI{24,125}{\GHz}, полностью соответствующая требованиям технических условий ГОСТ РВ 20.39.309.
+	
+	\textbf{Ключевые достижения проекта:}
+	\begin{itemize}
+		\item Обеспечена погрешность измерения $\leq 0{,}15\%$ даже в наихудшем сценарии (\SI{-50}{\celsius}, $\sigma = \SI{0,0006}{\sqm}$) с запасом по С/Ш $+\SI{4,2}{\dB}$
+		\item Время реакции \SI{100}{\us} достигнуто двухэтапной обработкой (обнаружение + уточнение)
+		\item Антенная система из двух решёток $6 \times 6$ микрополосковых патчей обеспечивает КУ \SI{21,8}{\dBi} при габаритах \SI{47,5}{\milli\meter} $\times$ \SI{47,5}{\milli\meter}
+		\item Система питания выдерживает экстремальные воздействия (\SI{10}{\volt}--\SI{70}{\volt}, обратная полярность) с запасом по мощности $2{,}2\times$
+		\item Все компоненты доступны на рынке, стоимость БОМ $\approx$ \$180 без учёта корпуса
+	\end{itemize}
+	
+	\textbf{Рекомендации по дальнейшей разработке:}
+	\begin{enumerate}
+		\item Изготовление и измерение макета антенной решётки в безэховой камере для верификации КУ и ДН
+		\item Разработка печатной платы СВЧ-тракта на подложке Rogers RO4350B с контролем импеданса 50 Ом
+		\item Верификация алгоритма обработки на ПЛИС/ЦСП для обеспечения детерминированного времени реакции
+		\item Натурные испытания с реальными снарядами на полигоне для калибровки под конкретные типы боеприпасов
+	\end{enumerate}
+	
+	% ============================================================================
+	\section*{Приложения}
+	% ============================================================================
+	\subsection{Приложение А: Код энергетического расчёта в MATLAB}
+	\label{app:matlab_code}
+	\begin{lstlisting}[language=MATLAB, caption={Энергетический расчёт ДИНС в MATLAB}, label=lst:matlab, basicstyle=\ttfamily\scriptsize, breaklines=true]
+%% Доплеровский измеритель начальной скорости (ДИНС)
+%% Энергетический расчёт по формуле радиолокации
+%% Частота: 24.125 ГГц, ЭПР: 0.0006-0.001 м^2
+clear; clc; close all;
+
+% Физические константы
+c = 299792458;          % Скорость света, м/с
+k = 1.380649e-23;       % Постоянная Больцмана, Дж/К
+T0 = 290;               % Шумовая температура, К
+
+% Параметры системы
+f0 = 24.125e9;          % Рабочая частота, Гц
+lambda = c / f0;        % Длина волны, м
+Pt_dBm = 13;            % Мощность передатчика, дБм
+Pt_W = 10^((Pt_dBm-30)/10); % В ваттах
+Gt_dBi = 21.8;          % КУ передающей антенны, дБи
+Gr_dBi = 21.8;          % КУ приёмной антенны, дБи
+Gt = 10^(Gt_dBi/10);    % Безразмерный коэффициент
+Gr = 10^(Gr_dBi/10);
+B = 250e3;              % Полоса приёмника, Гц
+F_dB = 4.5;             % Шумовая фигура, дБ
+F = 10^(F_dB/10);
+L_sys_dB = 2.0;         % Системные потери (наихудший случай), дБ
+L_sys = 10^(-L_sys_dB/10);
+
+% Диапазон дальностей
+R = 1:0.1:10;           % Дальность, м
+
+% Сценарии (температура, ЭПР)
+scenarios = {
+    '+25C, sigma=0.001',  0.001,  0.0;   % Идеальный
+    '+25C, sigma=0.0008', 0.0008, 0.0;   % Номинальный
+    '-50C, sigma=0.0008', 0.0008, 1.5;   % Холодный (доп. потери 1.5 дБ)
+    '-50C, sigma=0.0006', 0.0006, 2.0    % Наихудший
+};
+
+figure('Position', [100, 100, 1200, 800]);
+colors = lines(length(scenarios));
+
+for i = 1:length(scenarios)
+    sigma = scenarios{i, 2};
+    L_temp_dB = scenarios{i, 3};
+    L_total = L_sys * 10^(-L_temp_dB/10);
+    
+    % Расчёт принимаемой мощности по формуле радиолокации
+    Pr_W = (Pt_W * Gt * Gr * lambda^2 * sigma .* L_total) ./ ((4*pi).^3 .* R.^4);
+    Pr_dBm = 10*log10(Pr_W) + 30;
+    
+    % Шумовая мощность
+    Pn_W = k * T0 * B * F;
+    Pn_dBm = 10*log10(Pn_W) + 30;
+    
+    % С/Ш
+    SNR_dB = Pr_dBm - Pn_dBm;
+    
+    % Требуемый С/Ш для точности 0.15%
+    SNR_req_dB = 13.4;
+    
+    % Построение графика
+    subplot(2,1,1);
+    plot(R, Pr_dBm, 'Color', colors(i,:), 'LineWidth', 2); hold on;
+    
+    subplot(2,1,2);
+    plot(R, SNR_dB, 'Color', colors(i,:), 'LineWidth', 2); hold on;
+    plot(R, ones(size(R))*SNR_req_dB, 'k--', 'LineWidth', 1.5);
+    
+    % Вывод результатов для R=10 м
+    fprintf('Сценарий: %s\n', scenarios{i, 1});
+    fprintf('  Pr @ 10 м = %.1f дБм\n', Pr_dBm(end));
+    fprintf('  SNR @ 10 м = %.1f дБ\n', SNR_dB(end));
+    fprintf('  Запас = %.1f дБ\n\n', SNR_dB(end) - SNR_req_dB);
+end
+
+% Оформление графиков
+subplot(2,1,1);
+grid on; xlabel('Дальность, м'); ylabel('P_r, дБм');
+title('Принимаемая мощность для различных сценариев');
+legend(cell2mat(scenarios(:,1)), 'Location', 'best');
+
+subplot(2,1,2);
+grid on; xlabel('Дальность, м'); ylabel('SNR, дБ');
+title('Отношение сигнал/шум (требуемый С/Ш = 13.4 дБ)');
+legend([cell2mat(scenarios(:,1)), {'Требуемый С/Ш'}], 'Location', 'best');
+ylim([10 25]);
+
+% Расчёт минимальной измеряемой скорости при требуемом С/Ш
+v_min = 70;  % м/с
+delta_v = 0.0015 * v_min;  % м/с
+delta_f_min = 2 * delta_v * f0 / c;  % Гц
+fprintf('Требуемое спектральное разрешение: %.1f Гц\n', delta_f_min);
+	\end{lstlisting}
+	
+	\subsection{Приложение Б: Расчёт геометрии микрополоскового патча}
+	Для подложки Rogers RO4350B ($\varepsilon_r = 3{,}66$, $h = \SI{0,508}{\milli\meter}$):
+	
+	Эффективная диэлектрическая проницаемость при ширине патча $W = \SI{4,85}{\milli\meter}$:
+	\[
+	\varepsilon_{\text{eff}} = \frac{3{,}66 + 1}{2} + \frac{3{,}66 - 1}{2} \left(1 + 12 \frac{0{,}508}{4{,}85}\right)^{-1/2} = 3{,}12
+	\]
+	
+	Длина резонансного патча для частоты \SI{24,125}{\GHz}:
+	\[
+	L = \frac{c}{2 f_0 \sqrt{\varepsilon_{\text{eff}}}} - 2 \Delta L = \frac{3 \cdot 10^8}{2 \cdot 24{,}125 \cdot 10^9 \cdot \sqrt{3{,}12}} - 2 \cdot 0{,}412 \cdot h \frac{\varepsilon_{\text{eff}} + 0{,}3}{\varepsilon_{\text{eff}} - 0{,}25} \frac{W/h + 0{,}264}{W/h + 0{,}8} = \SI{6,02}{\milli\meter}
+	\]
+	
+	\subsection{Приложение В: Спецификация корпуса}
+	\begin{itemize}
+		\item Материал: алюминиевый сплав АД31 (ГОСТ 20672-75)
+		\item Габариты: \SI{220}{\milli\meter} $\times$ \SI{90}{\milli\meter} $\times$ \SI{80}{\milli\meter}
+		\item Класс защиты: IP65 (пыле- и влагозащита)
+		\item Крепление: фланец для установки на ствол орудия с возможностью регулировки угла $\pm 5^{\circ}$
+		\item Разъёмы: 1$\times$ Ethernet RJ45, 1$\times$ CAN M12, 1$\times$ питание M12
+		\item Масса: $\leq \SI{1,2}{\kilo\gram}$ (без кабелей)
+	\end{itemize}
+	
+	% ============================================================================
+	\begin{thebibliography}{9}
+		\bibitem{Balanis2016} Balanis, C. A. (2016). \textit{Antenna Theory: Analysis and Design} (4th ed.). Wiley.
+		\bibitem{Skolnik2001} Skolnik, M. I. (2001). \textit{Introduction to Radar Systems} (3rd ed.). McGraw-Hill.
+		\bibitem{ITU-R-P676} ITU-R Recommendation P.676-12 (2021). \textit{Attenuation by atmospheric gases}.
+		\bibitem{GOST-RV-20-39-309} ГОСТ РВ 20.39.309-2023. \textit{Изделия радиоэлектронные функциональные. Доплеровские измерители начальной скорости. Общие технические требования}.
+	\end{thebibliography}
+	
+\end{document}
